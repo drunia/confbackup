@@ -11,17 +11,23 @@ backup() {
   #Save old backup
   [ -e $BACKUP_FILE_GZ ] && mv $BACKUP_FILE_GZ $BACKUP_FILE.old
   local errors=0
+  local lasterrors=0
   for dir in $BACKUP_DIRS; do
     echo -n "Backup "$HOME/$dir" to $BACKUP_FILE ... "
     [ -e "$HOME/$dir" ] || {
       echo "SKIP (Not exists)"
       continue
     }
-    tar -rpf $BACKUP_FILE "$HOME/$dir" 1>/dev/null 2>&1
+    tar -rpf $BACKUP_FILE "$HOME/$dir" 1>/dev/null 2>errors
     errors=`expr $errors + $?`
-    [ $errors -gt 0 ] && echo "WITH ERRORS" || echo "OK"
+    [ $errors -gt $lasterrors ] && {
+      echo "WITH ERRORS"
+      cat errors
+    } || echo "OK"
+    rm errors 2>/dev/null 1>&2
+    lasterrors=$errors
   done 
-  #Check backups operation
+  #Check backups operation on errors
   [ $errors -eq 0 ] && {
     #All ok
     rm $BACKUP_FILE.old 2>/dev/null
@@ -41,6 +47,22 @@ restore() {
     echo "Nothing to restore, try backup first."
     return 1;
   }
+  echo -n "Restoring from $BACKUP_FILE_GZ ..."
+  tar -xzpf $BACKUP_FILE_GZ 1>/dev/null 2>errors || {
+    echo "WITH ERRORS"
+    cat errors
+    return 1
+  }
+  for dir in $BACKUP_DIRS; do
+    cp -rf ."$HOME/$dir" "$HOME/" 1>/dev/null 2>errors || {
+      echo "WITH ERRORS"
+      cat errors
+      return 1
+    }
+  done 
+  echo "OK"
+  rm -rf ."${HOME%/*}" 2>/dev/null 1>&1
+  rm errors 2>/dev/null 1>&1
   return 0
 }
 
@@ -84,5 +106,6 @@ case $1 in
     show_usage
     ;;
 esac
+
 
 exit 0
