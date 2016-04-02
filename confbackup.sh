@@ -13,7 +13,7 @@ backup() {
   local errors=0
   local lasterrors=0
   for dir in $BACKUP_DIRS; do
-    echo -n "Backup "$HOME/$dir" to $BACKUP_FILE ... "
+    echo -n "Backup "$HOME/$dir" to $BACKUP_FILE_GZ ... "
     [ -e "$HOME/$dir" ] || {
       echo "SKIP (Not exists)"
       continue
